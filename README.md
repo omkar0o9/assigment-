@@ -1,355 +1,317 @@
 /*
- * Lab 5
- * Student Name
+ * Omkar Sharma
+ * Lab 5 – Trip Planner
  * COSC 1436
- * Fall 2023
+ * Fall 2025
  */
 
 #include <iostream>
-#include <string>
 #include <iomanip>
+#include <string>
+#include <cctype>
 #include <cmath>
+#include <climits>
 
-using namespace std;
-
-//Stop details
 struct Stop
 {
     int x;
     int y;
 };
 
-// Clear input buffer
-void ClearInputBuffer()
+// clears bad input
+void ClearInput()
 {
-    cin.ignore(INT_MAX, '\n');
+    std::cin.clear();
+    std::cin.ignore(INT_MAX, '\n');
 }
 
-// Display error message
-void DisplayError(string message)
+// story 1
+void ShowHeader()
 {
-    cout << "ERROR: " << message << endl;
+    std::cout << "Trip Planner Program\n";
+    std::cout << "Omkar Sharma\n";
+    std::cout << "COSC 1436 Fall 2025\n";
+    std::cout << "------------------------\n\n";
 }
 
-// Read integer with range
-int ReadInt(int minValue, int maxValue)
+void ShowError(const std::string& msg)
 {
-    int value;
+    std::cout << "ERROR: " << msg << std::endl;
+}
+
+bool AskYesNo(const std::string& msg)
+{
     while (true)
     {
-        cin >> value;
-        
-        if (value >= minValue && value <= maxValue)
-        {
-            ClearInputBuffer();
-            return value;
-        }
-        
-        DisplayError("Value must be between " + to_string(minValue) + " and " + to_string(maxValue));
-        cin.clear();
-        ClearInputBuffer();
+        std::cout << msg << " (Y/N): ";
+        std::string input;
+        std::getline(std::cin, input);
+
+        if (input.empty())
+            continue;
+
+        char choice = (char)std::toupper(input[0]);
+
+        if (choice == 'Y') return true;
+        if (choice == 'N') return false;
+
+        ShowError("Please enter Y or N");
     }
 }
 
-// Read character choice
-char ReadChar(string options)
+int GetInt(const std::string& prompt, int min, int max)
 {
-    string input;
-    getline(cin, input);
-    
-    if (input.length() > 0)
+    while (true)
     {
-        char choice = toupper(input[0]);
-        
-        for (char opt : options)
+        std::cout << prompt;
+
+        int value;
+        std::cin >> value;
+
+        if (std::cin.fail())
         {
-            if (toupper(opt) == choice)
-                return choice;
+            ShowError("Invalid number");
+            ClearInput();
+            continue;
         }
+
+        ClearInput();
+
+        if (value < min || value > max)
+        {
+            ShowError("Number out of range");
+            continue;
+        }
+
+        return value;
     }
-    
-    DisplayError("Please enter one of: " + options);
-    return ReadChar(options);
 }
 
-// Confirm action
-bool Confirm(string message)
+// story 8
+int GetSpeed()
 {
-    cout << message << " (Y/N): ";
-    string answer;
-    getline(cin, answer);
-    
-    return (answer.length() > 0 && toupper(answer[0]) == 'Y');
+    return GetInt("Enter speed (1–60 mph): ", 1, 60);
 }
 
-// Calculate distance between points
-double GetDistance(int x1, int y1, int x2, int y2)
+char ShowMenu()
 {
-    double dx = x2 - x1;
-    double dy = y2 - y1;
-    return sqrt(dx * dx + dy * dy);
+    std::cout << "\nTrip Menu\n";
+    std::cout << "---------\n";
+    std::cout << "A) Add Stop\n";
+    std::cout << "V) View Trip\n";
+    std::cout << "D) Delete Stop\n";
+    std::cout << "C) Clear Trip\n";
+    std::cout << "Q) Quit\n";
+    std::cout << "Choice: ";
+
+    std::string input;
+    std::getline(std::cin, input);
+
+    if (input.empty())
+        return '\0';
+
+    return (char)std::toupper(input[0]);
 }
 
-// Add stop to array
-bool AddStopToArray(Stop* trip[], int size, int& count, Stop* stop)
+// story 3
+int GetStopCount(Stop* trip[], int size)
 {
-    if (count >= size)
-        return false;
-    
+    int count = 0;
+
+    for (int i = 0; i < size; i++)
+    {
+        if (trip[i] == nullptr)
+            break;
+        count++;
+    }
+
+    return count;
+}
+
+// story 4
+bool InsertStop(Stop* trip[], int size, Stop* s)
+{
     for (int i = 0; i < size; i++)
     {
         if (trip[i] == nullptr)
         {
-            trip[i] = stop;
-            count++;
+            trip[i] = s;
             return true;
         }
     }
-    
     return false;
 }
 
-// Find stop by number (1-based)
-Stop* FindStopByNumber(Stop* trip[], int count, int stopNum)
+void AddStopMenu(Stop* trip[], int size)
 {
-    if (stopNum < 1 || stopNum > count)
-        return nullptr;
-    
-    return trip[stopNum - 1];
-}
+    int x = GetInt("Enter X (-100 to 100): ", -100, 100);
+    int y = GetInt("Enter Y (-100 to 100): ", -100, 100);
 
-// Remove stop from array
-void RemoveStopFromArray(Stop* trip[], int size, int& count, Stop* stop)
-{
-    // Find which index this stop is at
-    int index = -1;
-    for (int i = 0; i < count; i++)
+    Stop* s = new Stop;
+    s->x = x;
+    s->y = y;
+
+    if (!InsertStop(trip, size, s))
     {
-        if (trip[i] == stop)
-        {
-            index = i;
-            break;
-        }
-    }
-    
-    if (index == -1)
+        ShowError("Trip already full");
+        delete s;
         return;
-    
-    // Delete the stop
-    delete trip[index];
-    
-    // Move everything up
-    for (int i = index; i < count - 1; i++)
-    {
-        trip[i] = trip[i + 1];
     }
-    
-    trip[count - 1] = nullptr;
-    count--;
+
+    std::cout << "Stop added successfully\n";
 }
 
-// Clear all stops
-void ClearAllStops(Stop* trip[], int size, int& count)
+// story 8
+double CalcDistance(int x1, int y1, int x2, int y2)
 {
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+// story 5 + 8
+void ViewTripMenu(Stop* trip[], int size, int speed)
+{
+    int count = GetStopCount(trip, size);
+
+    if (count == 0)
+    {
+        std::cout << "Trip has no stops\n";
+        return;
+    }
+
+    std::cout << std::fixed << std::setprecision(2);
+
+    std::cout << " #"
+              << std::setw(16) << "Location"
+              << std::setw(18) << "Distance"
+              << std::setw(16) << "Time\n";
+
+    std::cout << std::setw(60) << std::setfill('-') << ""
+              << std::setfill(' ') << "\n";
+
+    int lastX = 0;
+    int lastY = 0;
+
+    double totalDist = 0;
+    double totalTime = 0;
+
     for (int i = 0; i < count; i++)
+    {
+        Stop* s = trip[i];
+
+        double d = CalcDistance(lastX, lastY, s->x, s->y);
+        double mins = std::ceil((d / speed) * 60);
+
+        totalDist += d;
+        totalTime += mins;
+
+        std::string loc = "(" + std::to_string(s->x) + ", " +
+                          std::to_string(s->y) + ")";
+
+        std::cout << std::setw(4) << (i + 1)
+                  << std::setw(16) << loc
+                  << std::setw(18) << d
+                  << std::setw(16) << mins << "\n";
+
+        lastX = s->x;
+        lastY = s->y;
+    }
+
+    std::cout << std::setw(60) << std::setfill('-') << ""
+              << std::setfill(' ') << "\n";
+
+    std::cout << std::setw(4) << count
+              << std::setw(16) << ""
+              << std::setw(18) << totalDist
+              << std::setw(16) << totalTime << "\n";
+}
+
+// story 6
+void ShiftStops(Stop* trip[], int size)
+{
+    int index = 0;
+
+    for (int i = 0; i < size; i++)
+    {
+        if (trip[i] != nullptr)
+            trip[index++] = trip[i];
+    }
+
+    for (int i = index; i < size; i++)
+        trip[i] = nullptr;
+}
+
+void DeleteStopMenu(Stop* trip[], int size)
+{
+    int num = GetInt("Enter stop number: ", 1, size);
+    int idx = num - 1;
+
+    if (idx < 0 || idx >= size || trip[idx] == nullptr)
+    {
+        ShowError("Stop does not exist");
+        return;
+    }
+
+    delete trip[idx];
+    trip[idx] = nullptr;
+
+    ShiftStops(trip, size);
+
+    std::cout << "Stop removed\n";
+}
+
+// story 7
+void ClearTrip(Stop* trip[], int size)
+{
+    for (int i = 0; i < size; i++)
     {
         delete trip[i];
         trip[i] = nullptr;
     }
-    count = 0;
 }
 
-// View trip with distances and times
-void ViewTrip(Stop* trip[], int count, int speed)
+void ClearTripMenu(Stop* trip[], int size)
 {
-    if (count == 0)
-    {
-        cout << "No stops in the trip." << endl << endl;
+    if (!AskYesNo("Clear entire trip"))
         return;
-    }
-    
-    cout << endl;
-    cout << "Stop            Location    Distance (miles)      Time (minutes)" << endl;
-    cout << "--------------------------------------------------------------------" << endl;
-    
-    double totalDistance = 0;
-    double totalTime = 0;
-    int prevX = 0, prevY = 0;
-    
-    cout << fixed << setprecision(2);
-    
-    for (int i = 0; i < count; i++)
-    {
-        Stop* currentStop = trip[i];
-        
-        double distance = GetDistance(prevX, prevY, currentStop->x, currentStop->y);
-        double timeMinutes = (distance / speed) * 60.0;
-        int roundedTime = static_cast<int>(ceil(timeMinutes));
-        
-        totalDistance += distance;
-        totalTime += roundedTime;
-        
-        cout << right << setw(4) << (i + 1) << "            "
-             << "(" << setw(3) << currentStop->x 
-             << ", " << setw(3) << currentStop->y << ")"
-             << right << setw(17) << distance 
-             << setw(21) << roundedTime << endl;
-        
-        prevX = currentStop->x;
-        prevY = currentStop->y;
-    }
-    
-    cout << "--------------------------------------------------------------------" << endl;
-    cout << right << setw(4) << count 
-         << "                          "
-         << right << setw(17) << totalDistance
-         << setw(21) << totalTime << endl << endl;
+
+    ClearTrip(trip, size);
+    std::cout << "Trip cleared\n";
 }
 
-// Menu function to add stop
-void MenuAddStop(Stop* trip[], int maxSize, int& count)
-{
-    if (count >= maxSize)
-    {
-        DisplayError("Trip is full! Maximum " + to_string(maxSize) + " stops allowed.");
-        return;
-    }
-    
-    cout << "Adding new stop:" << endl;
-    
-    cout << "Enter X coordinate (-100 to 100): ";
-    int x = ReadInt(-100, 100);
-    
-    cout << "Enter Y coordinate (-100 to 100): ";
-    int y = ReadInt(-100, 100);
-    
-    Stop* newStop = new Stop;
-    newStop->x = x;
-    newStop->y = y;
-    
-    if (AddStopToArray(trip, maxSize, count, newStop))
-        cout << "Stop added successfully!" << endl;
-    else
-    {
-        DisplayError("Failed to add stop.");
-        delete newStop;
-    }
-}
-
-// Menu function to remove stop
-void MenuRemoveStop(Stop* trip[], int maxSize, int& count)
-{
-    if (count == 0)
-    {
-        DisplayError("No stops to remove.");
-        return;
-    }
-    
-    cout << "Current trip has " << count << " stops." << endl;
-    cout << "Enter stop number to remove (1-" << count << "): ";
-    int stopNumber = ReadInt(1, count);
-    
-    Stop* stopToRemove = FindStopByNumber(trip, count, stopNumber);
-    if (stopToRemove == nullptr)
-    {
-        DisplayError("Stop not found.");
-        return;
-    }
-    
-    if (Confirm("Are you sure you want to remove stop " + to_string(stopNumber) + "?"))
-    {
-        RemoveStopFromArray(trip, maxSize, count, stopToRemove);
-        cout << "Stop " << stopNumber << " removed successfully!" << endl;
-    }
-    else
-        cout << "Stop removal cancelled." << endl;
-}
-
-// Menu function to clear trip
-void MenuClearTrip(Stop* trip[], int maxSize, int& count)
-{
-    if (count == 0)
-    {
-        cout << "Trip is already empty." << endl;
-        return;
-    }
-    
-    if (Confirm("Are you sure you want to clear the entire trip?"))
-    {
-        ClearAllStops(trip, maxSize, count);
-        cout << "Trip cleared successfully!" << endl;
-    }
-    else
-        cout << "Trip clearance cancelled." << endl;
-}
-
-// Show and handle main menu
-bool HandleMainMenu(Stop* trip[], int maxSize, int& count, int speed)
-{
-    cout << endl << "MAIN MENU" << endl;
-    cout << "---------" << endl;
-    cout << "A) Add Stop" << endl;
-    cout << "V) View Trip" << endl;
-    cout << "R) Remove Stop" << endl;
-    cout << "C) Clear Trip" << endl;
-    cout << "Q) Quit" << endl << endl;
-    
-    cout << "Enter your choice: ";
-    char choice = ReadChar("AVRCQ");
-    
-    switch (choice)
-    {
-        case 'A':
-            MenuAddStop(trip, maxSize, count);
-            break;
-            
-        case 'V':
-            ViewTrip(trip, count, speed);
-            break;
-            
-        case 'R':
-            MenuRemoveStop(trip, maxSize, count);
-            break;
-            
-        case 'C':
-            MenuClearTrip(trip, maxSize, count);
-            break;
-            
-        case 'Q':
-            if (Confirm("Are you sure you want to quit?"))
-                return false;
-            break;
-    }
-    
-    return true;
-}
-
-// Main function
+// main
 int main()
 {
-    cout << "Trip Planner Program" << endl;
-    cout << "Created by Student Name" << endl;
-    cout << "COSC 1436 - Fall 2023" << endl << endl;
-    
-    // Get speed
-    cout << "Enter your travel speed (1-60 mph): ";
-    int speed = ReadInt(1, 60);
-    cout << endl;
-    
-    // Create trip array
+    ShowHeader();
+
     const int MAX_STOPS = 100;
-    Stop* trip[MAX_STOPS] = {nullptr};
-    int stopCount = 0;
-    
-    // Main loop
-    bool continueRunning = true;
-    while (continueRunning)
+    Stop* trip[MAX_STOPS] = { nullptr };
+
+    int speed = GetSpeed();
+
+    bool quit = false;
+    while (!quit)
     {
-        continueRunning = HandleMainMenu(trip, MAX_STOPS, stopCount, speed);
+        char choice = ShowMenu();
+
+        switch (choice)
+        {
+            case 'A': AddStopMenu(trip, MAX_STOPS); break;
+            case 'V': ViewTripMenu(trip, MAX_STOPS, speed); break;
+            case 'D': DeleteStopMenu(trip, MAX_STOPS); break;
+            case 'C': ClearTripMenu(trip, MAX_STOPS); break;
+
+            case 'Q':
+                if (AskYesNo("Quit program"))
+                    quit = true;
+                break;
+
+            default:
+                ShowError("Unknown menu option");
+        }
     }
-    
-    // Clean up memory before exiting
-    ClearAllStops(trip, MAX_STOPS, stopCount);
-    
+
+    ClearTrip(trip, MAX_STOPS);
     return 0;
 }
